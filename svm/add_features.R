@@ -10,18 +10,18 @@ library(caret)
 ####AS OF 20220419
 #this one to use with new annotations!!!! some columns have changed 
 
-#read in desired dataset
 #this one is with 20220419 new annotation from alex, sample of 259
 #df1<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220302_snowman_evenlysampled.csv')
 
 
-df1<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumorandsv_newannot.csv')
+#read in desired dataset 
+#this dataset went through filter_df.R so that same # of tumor types and same # of SVs per sample 
+df<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumorandsv_newannot.csv')
 #this one is with evenly sampled sv as well (ish)
 #df<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumor_newannot.csv')
 
-df<-df1
-
-
+#########################################
+#format various columns  
 
 # Encoding the target feature as factor
 df$sv_class = factor(df$CLASS, levels=c('GERMLINE','SOMATIC'), labels=c(0,1))
@@ -33,7 +33,8 @@ sample_name<-sapply(1:nrow(df), function(i){
   })
 df$sample_name<-sample_name
 
-#add in features to test 
+
+#add in more features to test 
 df[,homlen:= nchar(HOMSEQ)]
 df[,insertion_len:= nchar(INSERTION)]
 df[,hom_gc:= ifelse(nchar(HOMSEQ)>0, (str_count(HOMSEQ, 'G|C'))/nchar(HOMSEQ), 0)]
@@ -47,34 +48,26 @@ df[, inv:=ifelse(svtype=='INV', 1, 0)]
 df[, inter:=ifelse(svtype=='INTER', 1, 0)]
 
 
-#to replace empty line/sine distances -- could be better way to do this
+#to set a cap on empty line/sine/gnomad dist annotations -- could be better way to do this
 df[is.na(df)] <- -1
+
 # if want to count svs/sample within df 
 df[, num_sv_sample :=n_long_events]
 
 
 
-
-#df_orig<-df
-
+#############################################
 
 #if we want an even somatic/germline split 
 somatic_subset<-df[df$CLASS=='SOMATIC']
 germline_subset<-df[df$CLASS=='GERMLINE']
-df<-rbind(somatic_subset[sample(seq_len(nrow(somatic_subset)), size = min(nrow(somatic_subset),10000)),],
+df_all<-rbind(somatic_subset[sample(seq_len(nrow(somatic_subset)), size = min(nrow(somatic_subset),10000)),],
           germline_subset[sample(seq_len(nrow(germline_subset)), size = min(nrow(germline_subset), 10000)),])
 
 #split into test and train sets 
 set.seed(123)
-train_ind <- sample(seq_len(nrow(df)), size = floor(0.8 * nrow(df)))
-train <- df[train_ind, ]; test <- df[-train_ind, ]
-
-
-
-
-
-
-
+train_ind <- sample(seq_len(nrow(df_all)), size = floor(0.8 * nrow(df_all)))
+train <- df_all[train_ind, ]; test <- df_all[-train_ind, ]
 
 
 

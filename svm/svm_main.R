@@ -11,57 +11,61 @@ library(caret)
 #this one is filtered for SVs >1kb, equal number of tumors and SVs/tumor 
 #df1<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220302_snowman_evenlysampled.csv')
 
+#################################
+#THIS IS REPETITIVE CODE FROM add_features.R
 
 #this one is with 20220419 new annotation from alex, sample of 259
-df1<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/202200419_snowman_259samples_newannot.csv')
+# df1<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/202200419_snowman_259samples_newannot.csv')
+# 
+# 
+# df<-df1
+# 
+# # Encoding the target feature as factor
+# df$sv_class = factor(df$CLASS, levels=c('GERMLINE','SOMATIC'), labels=c(0,1))
+# 
+# #add in features to test 
+# df[,homlen:= nchar(HOMSEQ)]
+# df[,insertion_len:= nchar(INSERTION)]
+# df[name == df$name, svtype := ifelse(chrom1 == chrom2, ifelse(strand1 == strand2, 
+#                                                               ifelse(strand1 == '+', "h2hINV", "t2tINV"), ifelse(strand2 == "+", "DUP", "DEL")),"INTER")]
+# df$sv_type_factor = as.integer(factor(df$svtype, levels=c('DUP', 'DEL', 't2tINV', 'h2hINV', 'INTER'), labels=1:5))
+# df[,hom_gc:= ifelse(nchar(HOMSEQ)>0, (str_count(HOMSEQ, 'G|C'))/nchar(HOMSEQ), 0)]
+# df[,insertion_gc:= ifelse(nchar(INSERTION)>0, (str_count(INSERTION, 'G|C'))/nchar(INSERTION), 0)]
+# df[,annot_class := as.integer(factor(annot, levels=c('NON_PROTEIN_CODING','INTRON', 'CODING', 'INTERCHROMOSOMAL', 'CN'), labels=c(0:4)))]
+# #to replace empty line/sine distances -- could be better way to do this
+# df[is.na(df)] <- -1
+# 
+# # if want to count svs/sample within df 
+# # sample_counts<-data.table(table(df$file_path))
+# # file_paths<-df$file_path
+# # sample_svs<-sapply(1:nrow(df), function(i){
+# #   return(sample_counts$N[sample_counts$V1==file_paths[i]])
+# # })
+# df[, num_sv_sample :=n_long_events]
+# 
+# 
+# #if we want an even somatic/germline split 
+# somatic_subset<-df[df$CLASS=='SOMATIC']
+# germline_subset<-df[df$CLASS=='GERMLINE']
+# df<-rbind(somatic_subset[sample(seq_len(nrow(somatic_subset)), size = min(nrow(somatic_subset),10000)),],
+#           germline_subset[sample(seq_len(nrow(germline_subset)), size = min(nrow(germline_subset), 10000)),])
+# 
+# #split into test and train sets 
+# set.seed(123)
+# train_ind <- sample(seq_len(nrow(df)), size = floor(0.8 * nrow(df)))
+# train <- df[train_ind, ]; test <- df[-train_ind, ]
+# 
+# 
+# # feature scaling
+# features_toscale<-c('homlen', 'insertion_len', 'SPAN', 'germline_dist', 'sv_type_factor', 
+#                     'hom_gc', 'insertion_gc', 'line_dist', 'sine_dist', 'num_sv_sample', 'annot_class')
+# train_scaled<-(train[, lapply(.SD, scale), .SDcols = features_toscale])
+# train_scaled<-cbind(train_scaled, sv_class=train$sv_class)
+# test_scaled<-(test[, lapply(.SD, scale), .SDcols = features_toscale])
+# test_scaled<-cbind(test_scaled, sv_class=test$sv_class)
+# 
 
-
-df<-df1
-
-# Encoding the target feature as factor
-df$sv_class = factor(df$CLASS, levels=c('GERMLINE','SOMATIC'), labels=c(0,1))
-
-#add in features to test 
-df[,homlen:= nchar(HOMSEQ)]
-df[,insertion_len:= nchar(INSERTION)]
-df[name == df$name, svtype := ifelse(chrom1 == chrom2, ifelse(strand1 == strand2, 
-                                                              ifelse(strand1 == '+', "h2hINV", "t2tINV"), ifelse(strand2 == "+", "DUP", "DEL")),"INTER")]
-df$sv_type_factor = as.integer(factor(df$svtype, levels=c('DUP', 'DEL', 't2tINV', 'h2hINV', 'INTER'), labels=1:5))
-df[,hom_gc:= ifelse(nchar(HOMSEQ)>0, (str_count(HOMSEQ, 'G|C'))/nchar(HOMSEQ), 0)]
-df[,insertion_gc:= ifelse(nchar(INSERTION)>0, (str_count(INSERTION, 'G|C'))/nchar(INSERTION), 0)]
-df[,annot_class := as.integer(factor(annot, levels=c('NON_PROTEIN_CODING','INTRON', 'CODING', 'INTERCHROMOSOMAL', 'CN'), labels=c(0:4)))]
-#to replace empty line/sine distances -- could be better way to do this
-df[is.na(df)] <- -1
-
-# if want to count svs/sample within df 
-# sample_counts<-data.table(table(df$file_path))
-# file_paths<-df$file_path
-# sample_svs<-sapply(1:nrow(df), function(i){
-#   return(sample_counts$N[sample_counts$V1==file_paths[i]])
-# })
-df[, num_sv_sample :=n_long_events]
-
-
-#if we want an even somatic/germline split 
-somatic_subset<-df[df$CLASS=='SOMATIC']
-germline_subset<-df[df$CLASS=='GERMLINE']
-df<-rbind(somatic_subset[sample(seq_len(nrow(somatic_subset)), size = min(nrow(somatic_subset),10000)),],
-          germline_subset[sample(seq_len(nrow(germline_subset)), size = min(nrow(germline_subset), 10000)),])
-
-#split into test and train sets 
-set.seed(123)
-train_ind <- sample(seq_len(nrow(df)), size = floor(0.8 * nrow(df)))
-train <- df[train_ind, ]; test <- df[-train_ind, ]
-
-
-# feature scaling
-features_toscale<-c('homlen', 'insertion_len', 'SPAN', 'germline_dist', 'sv_type_factor', 
-                    'hom_gc', 'insertion_gc', 'line_dist', 'sine_dist', 'num_sv_sample', 'annot_class')
-train_scaled<-(train[, lapply(.SD, scale), .SDcols = features_toscale])
-train_scaled<-cbind(train_scaled, sv_class=train$sv_class)
-test_scaled<-(test[, lapply(.SD, scale), .SDcols = features_toscale])
-test_scaled<-cbind(test_scaled, sv_class=test$sv_class)
-
+################## SVM STARTS HERE
 
 
 #use radial if not linear kernel

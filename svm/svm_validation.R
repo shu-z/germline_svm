@@ -171,6 +171,9 @@ all_somatic<-fread('/Users/Shu/germline_svm/data/20220511_snowman_allsamples_new
 
 test_set_all<-rbind(all_germline, all_somatic)
 
+
+test1<-test_set_all[sample(1:nrow(test_set_all), 25000),]
+
 get_performance<-function(i, test_set){
   test_set[,sv_class:=ifelse(CLASS=='GERMLINE',0,1)]
   test_set[,sv_pred:=ifelse(gnomad_dist<i,0,1)]
@@ -189,7 +192,8 @@ get_performance<-function(i, test_set){
 
 
 
-test1<-lapply(c(seq(0,100, 20),seq (200,900,100), seq(1000,10000, 1000)), get_performance, test_set_all)
+test1<-lapply(c(5, 10, seq(0,100, 25),seq (200,900,100), seq(1000,10000, 1000), seq(15000, 30000, 5000)), get_performance, test_set_all)
+#test1<-lapply(c(seq(0,100, 25)), get_performance, test_set_all)
 
 test2<-list(1,1)
 test2<-rbind(test2, rbindlist(test1))
@@ -198,11 +202,11 @@ test2<-rbind(test2, list(0, 0))
 require(pracma)
 AUC = trapz(test2$fpr,test2$tpr)
 
-#pdf('/Users/shu/Downloads/distance_Roc_10k.pdf')
+pdf('/Users/shu/germline_svm/figs/20220517_distance_Roc_10k.pdf')
 plot(test2$fpr, test2$tpr, main = paste0("ROC Curve from Germline Reference Distance (0-10000bp)", '\n', 'AUC: ', substr(-AUC, 1,5) ), 
      xlim=c(0,1), ylim=c(0,1), xlab='False Positive Rate', ylab='True Positive Rate', colorize = F)
 lines(test2$fpr, test2$tpr)
 abline(a = 0, b = 1)
 
-#dev.off()
+dev.off()
 
