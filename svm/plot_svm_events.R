@@ -1,5 +1,65 @@
+
 #############################################
 # additional graphs
+
+
+
+scale<-1.5
+theme_ss <- theme_bw(base_size=16) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        #axis.text.x = element_text(angle = 90, vjust = 0.5, size=8*scale, family="mono"),
+        axis.text.x=element_blank(),
+        axis.ticks=element_blank(),
+        axis.text.y = element_text(hjust = 0.5,size=10*scale)
+        #axis.text = element_text(size = 10*scale, family = "mono"))
+  )
+
+
+
+#make boxplot for correctly classified events by tissue type 
+test_df<-cbind(test, pred=(y_pred), prob=max_prob)
+test_df[,missclassified:=ifelse(sv_class==y_pred, 0, 1)]
+
+#take substr of sample name 
+split_name<-strsplit(test_df$sample, '[.]')
+short_name<-lapply(1:length(split_name), function(i){
+  return(split_name[[i]][1])
+})
+test_df$patient_id<-short_name
+
+
+test_df_germline<-test_df[test_df$CLASS=='GERMLINE']
+
+missclass_by_sample<-function(sample_name){
+  samp<-test_df[test_df$patient_id==sample_name]
+  class_correct<-length(which(samp$missclassified==0))
+  return(data.table(prop_class=(class_correct/nrow(samp)),
+          tumor_type=substr(samp$project_code[1], 1, nchar(samp$project_code[1])-3)))
+}
+
+count_missclass<-rbindlist(lapply(unique(test_df$patient_id), missclass_by_sample))
+count_missclass_germline<-rbindlist(lapply(unique(test_df_germline$patient_id), missclass_by_sample))
+
+
+p<-ggplot(count_missclass, aes(x=tumor_type, y=prop_class, fill=tumor_type)) +
+  geom_boxplot() + geom_point(aes(), size = 1, shape = 21) + ylim(c(0,1)) + 
+  theme_ss
+# p<-p + labs(title='Proportion of Germline SVs Removed', subtitle='16k train, 4k test',
+#             x='tumor type', y='proportion of events removed')
+# p<-p + labs(title='Proportion of Correctly Classified Events', subtitle='16k train, 4k test',
+#  x='Tumor Type', y='Proportion of Events Correctly Classified')
+
+p<-p + labs(y='Proportion of Events Correctly Classified', x='')  +  
+    guides(fill=guide_legend(title="Tumor Type"))
+pdf('/Users/shu/germline_svm/figs/20220321_boxplot_events_classified.pdf', width=10, height=5)
+p
+dev.off()
+
+
+
+
+
 
 ###### look at pca of variables 
 pca_df<-na.omit(test_scaled)

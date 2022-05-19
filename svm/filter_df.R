@@ -16,16 +16,28 @@ map_id<-function(i){
 
 #read in snowman germline somatic calls 
 #new one has line-sine annotation
-snowman_germdist_dir<-'/Volumes/xchip_beroukhimlab/Alex/CCLE_PCAWG/Germline_Correctiion/Test_Set/Germ_dist/FUNCT_ANNOT/Line_Sine_Annot/'
+#snowman_germdist_dir<-'/Volumes/xchip_beroukhimlab/Alex/CCLE_PCAWG/Germline_Correctiion/Test_Set/Germ_dist/FUNCT_ANNOT/Line_Sine_Annot/'
+
+#this is updated one as of 04/19/2022, with updated coding annotations
+snowman_germdist_dir<-'/Volumes/xchip_beroukhimlab/Alex/CCLE_PCAWG/Figures_code/figure_data/data/4_annot/'
 all_paths<-paste0(snowman_germdist_dir, list.files(snowman_germdist_dir))
 map_df<-rbindlist(lapply(all_paths, map_id), fil=T)
 #table(map_df$project_code)   #min num tumors is 7 from dlbcl 
+#write intermediate mapping file so don't need to read again 
+#write.csv(map_df, '/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_mapping_newannot.csv')
 
-#select sample number of files per tutmor type 
+
+#select sample number of files per tumor type 
 even_tt_sampling<-function(tumor_type){
   tumor_paths<-map_df$path[map_df$project_code == tumor_type]
   return(data.table(paths=sample(tumor_paths, size=7), project_code=tumor_type))
 }
+
+all_tt_sampling<-function(tumor_type){
+  tumor_paths<-map_df$path[map_df$project_code == tumor_type]
+  return(data.table(paths=tumor_paths, project_code=tumor_type))
+}
+
 
 #remove short events and select same number of svs 
 even_sv_sampling<-function(row){
@@ -39,5 +51,11 @@ even_sv_sampling<-function(row){
 
 sample_paths<-rbindlist(lapply(unique(map_df$project_code), even_tt_sampling))
 final_svm_df<-rbindlist(apply(sample_paths, 1, even_sv_sampling))
-write.csv(final_svm_df, '/Volumes/xchip_beroukhimlab/Shu/ccle/20220302_snowman_evenlysampledtumor.csv')
+#write.csv(final_svm_df, '/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumorandsv_newannot.csv')
+
+#####if we want all the paths 
+#need to make sure n_len is correct 
+sample_paths<-rbindlist(lapply(unique(map_df$project_code), all_tt_sampling))
+# final_svm_df<-rbindlist(apply(sample_paths, 1, even_sv_sampling))
+write.csv(final_svm_df, '/Volumes/xchip_beroukhimlab/Shu/ccle/20220511_snowman_allsamples_newannot.csv')
 

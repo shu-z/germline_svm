@@ -9,8 +9,14 @@ library(caret)
 
 #read in desired dataset
 #this one is filtered for SVs >1kb, equal number of tumors and SVs/tumor 
-df<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220302_snowman_evenlysampled.csv')
+#df1<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220302_snowman_evenlysampled.csv')
 
+
+#this one is with 20220419 new annotation from alex, sample of 259
+df1<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/202200419_snowman_259samples_newannot.csv')
+
+
+df<-df1
 
 # Encoding the target feature as factor
 df$sv_class = factor(df$CLASS, levels=c('GERMLINE','SOMATIC'), labels=c(0,1))
@@ -50,7 +56,7 @@ train <- df[train_ind, ]; test <- df[-train_ind, ]
 
 # feature scaling
 features_toscale<-c('homlen', 'insertion_len', 'SPAN', 'germline_dist', 'sv_type_factor', 
-                    'hom_gc', 'insertion_gc', 'line_dist', 'sine_dist', 'annot_class')
+                    'hom_gc', 'insertion_gc', 'line_dist', 'sine_dist', 'num_sv_sample', 'annot_class')
 train_scaled<-(train[, lapply(.SD, scale), .SDcols = features_toscale])
 train_scaled<-cbind(train_scaled, sv_class=train$sv_class)
 test_scaled<-(test[, lapply(.SD, scale), .SDcols = features_toscale])
@@ -108,6 +114,7 @@ dev.off()
 ##### try platt's calibration
 source('/Users/shu/GermlineSVAnnotator/svm/prcalibrate_eric.R')
 
+#pdf('/Users/shu/germline_svm/figs/202204019_svm_20k_259samples_newannot.pdf', width=5)
 test1<-prCalibrate(as.numeric(levels(test_scaled$sv_class))[test_scaled$sv_class], as.numeric(max_prob))
 pr_cal<-prediction((test1$cal.probs), as.numeric(test_scaled$sv_class))
 
@@ -119,6 +126,8 @@ plot(pref_cal, main = paste0('AUC: ', substring(auc_val_cal,1,5) ), colorize = F
      cex.lab=1.5, cex.main=1.5)
 
 abline(a = 0, b = 1)
+
+dev.off()
 
 
 
@@ -144,53 +153,35 @@ option_list <- list(
 parseobj = OptionParser(option_list = option_list)
 opt = parse_args(parseobj)
 
+
+
+#make output file 
+OUTPUT <- opt$output
+system(paste("mkdir",OUTPUT,sep=" "))
+
+
 if (!file.exists(opt$input)) {
   stop(sprintf("Input file '%s' does not exist! ", opt$input))
-} 
+} else {
 
-else {
-  input_pth = paste0(opt$input)
-  sample <- unlist(strsplit(input_pth, "/"))[length(unlist(strsplit(input_pth, "/")))]
-  #sample <- gsub(".vcf.bedpe","", sample)
-  out_pth = paste0(opt$output)
-  
-  cat('Building references... \n')
-  
-  # get reference gene annotations and germline
-  hg38_annotgenes = fread(paste0(opt$genomeant))
-  hg38_exon_locations = fread(paste0(opt$exonannot))
-  hg38_germline_gnomad <<- fread(paste0(opt$germline))
-  
-  
-  ### build granges for reference
-  gene_locations <<- GRanges(hg38_annotgenes$chromosome, IRanges(hg38_annotgenes$start, 
-                                                                 hg38_annotgenes$end), EnsemblID = hg38_annotgenes$Ensembl_ID, GeneName = hg38_annotgenes$gene_name)
-  
-  exon_locations <<- GRanges(hg38_exon_locations$Chromosome, IRanges(hg38_exon_locations$Exon_start, 
-                                                                     hg38_exon_locations$Exon_end), Exon_Ensembl_ID = hg38_exon_locations$Exon_Ensembl_ID)
   
   cat("Reading file...\n")
-  bedpe_inp <- fread(paste0(input_pth))
+  bedpe_inp <- fread(paste0(opt$input))
   
-  cat("Adding gene annotations...\n")
-  bedpe_gene_annotation <- rbindlist(mclapply(1:nrow(bedpe_inp), annotate_sv, bedpe_inp, mc.cores = opt$cores))
   
-  cat("Adding exon annotations...\n")
-  bedpe_gene_exon_annotation <- rbindlist(mclapply(1:nrow(bedpe_gene_annotation), annotate_exon, bedpe_gene_annotation, mc.cores = opt$cores))
+  if(need_filter=T){
+    source(filter_df.R)
+    
+  }
+
+
+  # time_start<-Sys.time()
+  # time_end <- Sys.time()
+  # cat(paste0("Began at ", time_begin,"\n"))
+  # cat(paste0("Ended at ", time_end,"\n"))
   
-  cat("Fuzzy filtering germline...\n")
-  bedpe_fuzzy_filtered <- rbindlist(mclapply(1:nrow(bedpe_gene_exon_annotation), fuzzy_filter_germline, bedpe_gene_exon_annotation, mc.cores = opt$cores))
-  bedpe_fuzzy_filtered_sub <- bedpe_fuzzy_filtered[,uuid:=NULL]
-  bedpe_somatic_only <- bedpe_fuzzy_filtered_sub[grep("Somatic", Filter)]
-  bedpe_somatic_only[,Filter := NULL]
-  output_somatic_only <- paste0(out_pth, sample, "_somatic_only_sv_annotated.bedpe")
-  output_all <- paste0(out_pth, sample, "_sv_annotated.bedpe")
   
-  write.table(bedpe_fuzzy_filtered_sub, output_all, sep = '\t', row.names = F, col.names = T, quote = F)
-  write.table(bedpe_somatic_only, output_somatic_only, sep = '\t', row.names = F, col.names = T, quote = F)
   
-  time_end <- Sys.time()
-  cat(paste0("Began at ", time_begin,"\n"))
-  cat(paste0("Ended at ", time_end,"\n"))
+  
   
 }
