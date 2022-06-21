@@ -104,7 +104,8 @@ upper_indices_binary<-g[upper.tri(empty_mat, diag = F), ]
 
 germline_binary_pval<-rbindlist(lapply(1:nrow(upper_indices_binary), binary_chisq, df=germline_binary))
 somatic_binary_pval<-rbindlist(lapply(1:nrow(upper_indices_binary), binary_chisq, df=somatic_binary))
-
+germline_binary_pval[,qval:=p.adjust(pval, method='fdr')]
+somatic_binary_pval[,qval:=p.adjust(pval, method='fdr')]
 
 ###############################################
 
@@ -135,6 +136,8 @@ binary_cont_indices <- expand.grid(row = 1:ncol(somatic_binary), col = 1:ncol(so
 
 germline_mw_pval<-rbindlist(lapply(1:nrow(binary_cont_indices), binary_mw, df_binary=germline_binary, df_continuous=germline_continuous))
 somatic_mw_pval<-rbindlist(lapply(1:nrow(binary_cont_indices), binary_mw, df=somatic_binary, df_continuous=somatic_continuous))
+germline_mw_pval[,qval:=p.adjust(pval, method='fdr')]
+somatic_mw_pval[,qval:=p.adjust(pval, method='fdr')]
 
 
 

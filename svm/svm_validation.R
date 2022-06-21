@@ -71,7 +71,7 @@ prop_class_svm_df<-rbindlist(lapply(seq(0.1, 0.9, by=0.1), change_test_prop))
 
 #TO TEST BOTH DIFFERENCES IN TRAIN AND TEST
 
-features_toscale<-c('homlen', 'insertion_len', 'SPAN', 'gnomad_dist', 'del', 'dup', 'h2hINV', 't2tINV', 'inter',
+features_toscale<-c('homlen', 'insertion_len', 'SPAN', 'gnomad_dist', 'del', 'dup', 'inv', 'inter',
                     'hom_gc', 'insertion_gc', 'line_dist', 'sine_dist', 'num_sv_sample', 'CN_annot', 'exon_annot')
 
 #test function, to be called by each train function 
@@ -209,4 +209,6 @@ lines(test2$fpr, test2$tpr)
 abline(a = 0, b = 1)
 
 dev.off()
+
+
 

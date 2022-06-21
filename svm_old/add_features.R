@@ -18,7 +18,9 @@ library(caret)
 #this dataset went through filter_df.R so that same # of tumor types and same # of SVs per sample 
 df<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumorandsv_newannot.csv')
 #this one is with evenly sampled sv as well (ish)
-#df<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumor_newannot.csv')
+#df2<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumor_newannot.csv')
+
+df<-fread('/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumor_alllongsv_newannot.csv')
 
 #########################################
 #format various columns  

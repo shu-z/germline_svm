@@ -21,8 +21,8 @@ map_id<-function(i){
 #this is updated one as of 04/19/2022, with updated coding annotations
 snowman_germdist_dir<-'/Volumes/xchip_beroukhimlab/Alex/CCLE_PCAWG/Figures_code/figure_data/data/4_annot/'
 all_paths<-paste0(snowman_germdist_dir, list.files(snowman_germdist_dir))
-map_df<-rbindlist(lapply(all_paths, map_id), fil=T)
-#table(map_df$project_code)   #min num tumors is 7 from dlbcl 
+map_df<-rbindlist(lapply(all_paths, map_id), fill=T)
+table(map_df$project_code)   #min num tumors is 7 from dlbcl 
 #write intermediate mapping file so don't need to read again 
 #write.csv(map_df, '/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_mapping_newannot.csv')
 
@@ -39,6 +39,8 @@ all_tt_sampling<-function(tumor_type){
 }
 
 
+
+
 #remove short events and select same number of svs 
 even_sv_sampling<-function(row){
   sample_df<-fread(row[1])
@@ -49,8 +51,18 @@ even_sv_sampling<-function(row){
                n_long_events=nrow(long_sample_df), project_code=row[2], file_path=row[1]))
 }
 
-sample_paths<-rbindlist(lapply(unique(map_df$project_code), even_tt_sampling))
-final_svm_df<-rbindlist(apply(sample_paths, 1, even_sv_sampling))
+dlbcl_tumors<-map_df[map_df$project_code=='DLBC-US']
+sample_paths<-rbindlist(lapply(unique(dlbcl_tumors$path), even_sv_sampling))
+
+
+random_tumors<-map_df[sample(1:nrow(map_df), size=50),]
+
+sample_paths<-rbindlist(lapply(unique(random_tumors$path), even_sv_sampling))
+
+
+
+#sample_paths<-rbindlist(lapply(unique(map_df$project_code), even_tt_sampling))
+#final_svm_df<-rbindlist(apply(sample_paths, 1, even_sv_sampling))
 #write.csv(final_svm_df, '/Volumes/xchip_beroukhimlab/Shu/ccle/20220425_snowman_evenlysampledtumorandsv_newannot.csv')
 
 #####if we want all the paths 
