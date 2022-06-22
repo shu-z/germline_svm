@@ -31,7 +31,7 @@ df_test_all<-rbind(somatic_test, germline_test)
 ################
 #test how different # of svs in test affect train 
 
-
+#to check accuracy for svs per sample after svm 
 missclass_by_sample<-function(id_name, test_df){
   samp<-test_df[test_df$patient_id==id_name]
   class_correct<-length(which(samp$missclassified==0))
@@ -39,21 +39,27 @@ missclass_by_sample<-function(id_name, test_df){
                     tumor_type=substr(samp$project_code[1], 1, nchar(samp$project_code[1])-3)))
 }
 
-
+#removes one tumor type from train set, runs svm
+#tests on only that tumor type
+#test set needs to be scaled with all tumors before isolating single tt
 train_tumor_out<-function(tt){
   print(tt)
  
   n_train<-10000
   df_train_minustt<-df_train_all[!(df_train_all$project_code==tt)]
   train <- df_train_minustt[sample(seq_len(nrow(df_train_minustt)), size = n_train), ]
-  test_tt<-df_test_all[df_test_all$project_code==tt]
+  test<-df_test_all
 
   #scale features in train and test set 
   train_scaled<-(train[, lapply(.SD, scale), .SDcols = features_toscale])
   train_scaled<-cbind(train_scaled, sv_class=train$sv_class)
   
-  test_scaled<-(test_tt[, lapply(.SD, scale), .SDcols = features_toscale])
-  test_scaled<-cbind(test_scaled, sv_class=test_tt$sv_class)
+  test_scaled<-(test[, lapply(.SD, scale), .SDcols = features_toscale])
+  test_scaled<-cbind(test_scaled, sv_class=test$sv_class, project_code=test$project_code)
+  
+  #need to scale with all test first, then subset one tumor type 
+  test_tt_scaled<-test_scaled[test_scaled$project_code==tt]
+  test_tt<-test[test$project_code==tt]
   
   
   classifier = svm(formula = sv_class ~ .,
@@ -63,10 +69,10 @@ train_tumor_out<-function(tt){
   
   
   #predict test set with classifier 
-  y_pred_all <- predict(classifier, newdata = test_scaled, decision.values = T, probability = T)
+  y_pred_all <- predict(classifier, newdata = test_tt_scaled, decision.values = T, probability = T)
   probabilities_all<-data.table(attr(y_pred_all, 'probabilities'))
   setcolorder(probabilities_all, c('0', '1'))
-  pr_all<-prediction(as.numeric(probabilities_all$`1`), as.numeric(test_scaled$sv_class))
+  pr_all<-prediction(as.numeric(probabilities_all$`1`), as.numeric(test_tt_scaled$sv_class))
   auc_all <- performance(pr_all, measure = "auc")
   
   
@@ -78,6 +84,7 @@ train_tumor_out<-function(tt){
   test_tt_res$patient_id<-short_name
   test_tt_res[,missclassified:=ifelse(sv_class==y_pred_all, 0, 1)]
   
+  #get proportion of misclassified SVs per sample s
   missclass_tt<-rbindlist(lapply(unique(test_tt_res$patient_id), missclass_by_sample, test_df=test_tt_res))
   
 
@@ -89,17 +96,20 @@ project_codes<-unique(df_test_all$project_code)
 tt_df<-rbindlist(lapply(project_codes[!(project_codes=='READ-US')], train_tumor_out))
 #tt_df<-rbindlist(lapply(project_codes[3:5], train_tumor_out))
 
-#write.csv(tt_df, '/Users/shu/germline_svm/data/20220615_train_minusonetumor_10ktrain.csv')
-  
-  
-tt_df<-fread('/Users/shu/germline_svm/data/20220615_train_minusonetumor_10ktrain.csv')
+#write.csv(tt_df, '/Users/shu/germline_svm/data/20220622_train_minusonetumor_testscaled_10ktrain.csv')
+#tt_df<-fread('/Users/shu/germline_svm/data/20220622_train_minusonetumor_testscaled_10ktrain.csv')
+# tt_unique_auc<-tt_df[!duplicated(tt_df[,c(1,3)]),]
+# tt_unique_auc<-tt_unique_auc[,c(1,3)]
 
 
+#get summary statistics 
 tt_med<-aggregate(prop_class ~ tumor_type, tt_df, 'median')
 tt_mean<-aggregate(prop_class ~ tumor_type, tt_df, 'mean')
 tt_sd<-aggregate(prop_class ~ tumor_type, tt_df, 'sd')
+tt_auc<-aggregate(auc_all ~ tumor_type, tt_df, 'median')
 
-tt_summary<-cbind(tt_med, tt_mean[,2], tt_sd[,2])
+tt_summary<-cbind(tt_med, tt_mean[,2], tt_sd[,2], tt_auc[,2])
+colnames(tt_summary)<-c('tumor_type', 'median', 'mean', 'sd', 'auc')
 
 ######################
 
@@ -123,13 +133,13 @@ theme_ss <- theme_bw(base_size=16) +
 #make boxplot to look at #SVs per tumor type, and soomatic/germline proportion 
 
 p<-ggplot(tt_df, aes(x=tumor_type, y=prop_class, fill=tumor_type)) +
-  #geom_boxplot() + geom_point(aes(), size = 1, shape = 21) + ylim(c(0,1)) + 
+  geom_boxplot() + geom_point(aes(), size = 1, shape = 21) + ylim(c(0.4,1)) + 
   #scale_y_continuous(trans='log10') + 
-  geom_violin() + geom_point(aes(), size = 1, shape = 21) + ylim(c(0,1)) + 
+  #geom_violin() + geom_point(aes(), size = 1, shape = 21) + ylim(c(0,1)) + 
   theme_ss
 p<-p + labs(title='Training on All Tumor Types Except Test Tumor Type', x='Tumor Type', y='Proportion of Correctly Classified SVs')  +  
   guides(fill=guide_legend(title="Tumor Type"))
-pdf('/Users/shu/germline_svm/figs/20220615_train_minusonetumor_10ktrain_violin.pdf', width=10, height=5)
+pdf('/Users/shu/germline_svm/figs/20220622_train_minusonetumor_10ktrain_violin.pdf', width=10, height=5)
 p
 dev.off()
 
