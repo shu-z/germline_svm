@@ -10,6 +10,7 @@ pcawg_metadata<-fread('/Volumes/xchip_beroukhimlab/Alex/PCAWG/PCAWG_metadata_OCT
 #pcawg_metadata<-fread('/Users/shu/ClusterSV/supp_table_pcawg.csv', sep=',')
 #which(pcawg_metadata == '00493087-9d9d-40ca-86d5-936f1b951c93', arr.ind=T)
 
+
 #function to map sample name to type 
 map_id<-function(i){
   sample_df<-fread(i, nrows=1)

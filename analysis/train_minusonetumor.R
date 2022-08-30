@@ -97,7 +97,7 @@ tt_df<-rbindlist(lapply(project_codes[!(project_codes=='READ-US')], train_tumor_
 #tt_df<-rbindlist(lapply(project_codes[3:5], train_tumor_out))
 
 #write.csv(tt_df, '/Users/shu/germline_svm/data/20220622_train_minusonetumor_testscaled_10ktrain.csv')
-#tt_df<-fread('/Users/shu/germline_svm/data/20220622_train_minusonetumor_testscaled_10ktrain.csv')
+tt_df<-fread('/Users/shu/germline_svm/data/20220622_train_minusonetumor_testscaled_10ktrain.csv')
 # tt_unique_auc<-tt_df[!duplicated(tt_df[,c(1,3)]),]
 # tt_unique_auc<-tt_unique_auc[,c(1,3)]
 

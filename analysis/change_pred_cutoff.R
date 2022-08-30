@@ -6,6 +6,9 @@ library(stringr)
 library(ggfortify)
 library(caret)
 library(ggplot2)
+library(scales)
+
+
 
 
 #####script to test differing # 
@@ -55,25 +58,102 @@ classifier = svm(formula = sv_class ~ .,
 
 
 #predict test set SVs with classifier
+#get probabilities 
 y_pred <- predict(classifier, newdata = test_scaled, decision.values = T, probability = T)
 probabilities<-data.table(attr(y_pred, 'probabilities'))
 setcolorder(probabilities, c('0', '1'))
-
-#get performance of classifier
-pr<-prediction(as.numeric(probabilities$`1`), as.numeric(test_scaled$sv_class))
-#pr<-prediction(as.numeric(y_pred), as.numeric(test_scaled$sv_class))
-auc <- performance(pr, measure = "auc")
+test_withprob<-cbind(test, prob=probabilities$`1`)
 
 
-#graph roc/auc
-#pdf('/Volumes/xchip_beroukhimlab/Shu/ccle/poster_figs/20211214_roc_50k_10features_wide.pdf', width=10, height=6)
-auc_val <- auc@y.values[[1]]
-pref <- performance(pr, "tpr", "fpr")
-#plot(pref, main = paste0("ROC curve", '\n', 'AUC: ', auc_val), colorize = F)
-plot(pref, main = paste0('AUC: ', substring(auc_val,1,5) ), colorize = F, 
-     cex.lab=1.5, cex.main=1.5)
-abline(a = 0, b = 1)
-#dev.off()
+
+test_pred_cutoffs<-function(cutoff){
+  
+  test_predprob<-test_withprob[,c('sv_class', 'prob')]
+  test_predprob[, pred:=ifelse(prob<cutoff, 0, 1)]
+  test_predprob[, misclass:=ifelse(sv_class==pred, 0,1)]
+  
+  #split test set by germline somatic 
+  test_germline<-test_predprob[test_predprob$sv_class==0]
+  test_somatic<-test_predprob[test_predprob$sv_class==1]
+  
+  #calculate values 
+  prop_class<-sum(test_predprob$misclass==0)/nrow(test_predprob)
+  
+  #calculate proportion of germline/somatic called correctly  
+  prop_germline_class<-1-(sum(test_germline$misclass==1)/nrow(test_germline))
+  prop_somatic_class<-1-(sum(test_somatic$misclass==1)/nrow(test_somatic))
+    
+  #calculate true proportion of germline/somatic SVs in called germline/somatic SVs
+  prop_true_germline<-(sum(test_germline$misclass==0))/sum(test_predprob$pred==0)
+  prop_true_somatic<-(sum(test_somatic$misclass==0))/sum(test_predprob$pred==1)
+  
+
+  return(data.table(cutoff, prop_class, prop_germline_class, prop_somatic_class, 
+                    prop_true_germline, prop_true_somatic))
+  
+  
+}
+
+
+
+
+cutoff_df<-rbindlist(lapply(seq(0,1, by=0.1), test_pred_cutoffs))
+
+###################plots 
+
+#plot scale
+scale<-1.5
+theme_ss <- theme_bw(base_size=12) +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        axis.text.x = element_text(vjust = 0.5, size=8*scale),
+        #axis.text.x=element_blank(),
+        axis.ticks=element_blank(),
+        axis.text.y = element_text(hjust = 0.5,size=10*scale)
+        #axis.text = element_text(size = 10*scale, family = "mono"))
+  )
+
+
+
+
+#plot proportion of SVs classified correctly 
+cutoff_df_plot<-melt(cutoff_df[,c(1:4)], id='cutoff', variable.name = 'SV_Class')
+
+p<-ggplot(cutoff_df_plot, aes(x=cutoff, y=value, group=SV_Class)) + 
+  geom_line(aes(color=SV_Class)) + geom_point(aes(color=SV_Class), size=0.5) 
+p<- p + xlab('Prediction Probability Cutoff') + ylab ('Proportion of Misclassified SVs') + 
+  scale_colour_manual(labels=c('All SVs', 'Germline SVs', 'Somatic SVs'), 
+                      values=c( '#6D72C3', '#F8766D', '#00BFC4'))  + 
+ scale_x_continuous(breaks = seq(0,1, by=0.2)) + theme_ss  
+
+pdf('/Users/shu/germline_svm/figs/20220622_svmlinear_30k_predprobcutoff.pdf', width=8, height=5)
+p
+dev.off()
+
+
+
+
+
+#plot true positives 
+truepositives_df<-melt(cutoff_df[,c(1,5,6)], id='cutoff', variable.name = 'SV_Class')
+p<-ggplot(truepositives_df, aes(x=cutoff, y=value, group=SV_Class)) + 
+  geom_line(aes(color=SV_Class)) + geom_point(aes(color=SV_Class), size=0.5) 
+p<- p + xlab('Prediction Probability Cutoff') + ylab ('True SVs/Classified SVs') + 
+  scale_colour_manual(labels=c('Germline SVs', 'Somatic SVs'),
+                     values=c( '#F8766D', '#00BFC4'))  +
+  scale_x_continuous(breaks = seq(0,1, by=0.2)) + theme_ss  
+
+pdf('/Users/shu/germline_svm/figs/20220622_svmlinear_30k_predprobcutoff_truepositives.pdf', width=8, height=5)
+p
+dev.off()
+
+
+
+ 
+
+
+
+
 
 
 
