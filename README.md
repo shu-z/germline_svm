@@ -1,5 +1,11 @@
 # Germline SVM Classifier
 
+Added preprocessing folder, which needs to be done in the following order:
+
+1. bedpe_combination
+2. filtering
+3. fuzzy_matching
+4. annotation
 
 SVM Classifier to distinguish between somatic and germline SVs when matched normals are not available. Primarily for use with MANTA and SvABA structural variant callers.
 
