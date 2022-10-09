@@ -11,9 +11,8 @@ SVM Classifier to distinguish between somatic and germline SVs when matched norm
 
 **To Run SVM**
 
-0. Filtered and Annotated Files
-
-&nbsp; Begin with outputs of preprocessing steps, which:
+0. Filtered and Annotated Files <br />
+Begin with outputs of preprocessing steps, which:
     - Converted VCF files(from SvABA/Snowman) to BEDPEs
     - Filtered SV calls for high quality SVs
     - Annotated SV Breakpoints for proximity to gNOMAD SVs, LINE/SINE elements
