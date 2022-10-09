@@ -13,19 +13,19 @@ SVM Classifier to distinguish between somatic and germline SVs when matched norm
 
 0. Filtered and Annotated Files
 
-Begin with outputs of preprocessing steps, which:
+&nbsp; Begin with outputs of preprocessing steps, which:
     - Converted VCF files(from SvABA/Snowman) to BEDPEs
     - Filtered SV calls for high quality SVs
     - Annotated SV Breakpoints for proximity to gNOMAD SVs, LINE/SINE elements
     - Annotated SV Breakpoints for Exon and Whole Gene Impact 
 
-1. filter_df_newmethod.R
+1. filter_df_newmethod.R <br />
     This goes through each preprocessed SV file. It first creates a mapping file to match each sample ID to its corresponding tumor type. It then selects samples for training and testing. Finally, SVs greater than 1000bp from these samples are combined into train and test sets. 
     
-2. add_features_testtrainsep.R
+2. add_features_testtrainsep.R <br />
     This converts columns in the SV file into a usable format for the SVM. Additional feature columns are also created. 
     
-3. svm_main_newmethod.R
+3. svm_main_newmethod.R <br />
     This creates the final somatic/germline training sets. Features are scaled here. The SVM is then run here. Hyperparameters are tuned. The train classifier is then used to predict germline/somatic for the test set. 
 
 
